@@ -520,10 +520,10 @@ class FastAttentionviaLowRankDecomposition(FastAttention):
   def __init__(self,
                matrix_creator,
                kernel_feature_creator,
-               renormalize_attention,
-               numerical_stabilizer,
-               redraw_features,
-               unidirectional,
+               renormalize_attention = True,
+               numerical_stabilizer = 0.0,
+               redraw_features = False,
+               unidirectional = False,
                lax_scan_unroll=1):  # For optimal GPU performance, set to 16.
     rng = random.PRNGKey(0)
     self.matrix_creator = matrix_creator
@@ -888,7 +888,20 @@ class MultiHeadDotProductAttention_Modified(Module):
   Learn more and find an upgrade guide at 
   https://github.com/google/flax/blob/master/flax/linen/README.md"
   Multi-head dot-product attention."""
-
+  def __init__(self):  
+    self.qk_dim = 8
+    self.nb_random_features = 10000
+    self.unstructured_random_matrix_creator = functools.partial(
+        GaussianUnstructuredRandomMatrix, nb_random_features,
+        qk_dim)
+    self.ortho_random_matrix_creator = functools.partial(
+        GaussianOrthogonalRandomMatrix, self.nb_random_features,
+        self.qk_dim)
+    self.fast_unstruct_rfm_dot_product_attention = FastAttentionviaLowRankDecomposition(
+        self.unstructured_random_matrix_creator,
+        kernel_feature_creator)
+    self.fast_ortho_rfm_dot_product_attention = FastAttentionviaLowRankDecomposition(
+        self.ortho_random_matrix_creator, kernel_feature_creator)  
   def apply(self,
             inputs_q,
             inputs_kv,
@@ -910,8 +923,8 @@ class MultiHeadDotProductAttention_Modified(Module):
             precision=None,
             kernel_init=default_kernel_init,
             bias_init=zeros,
-            bias=True,
-            attention_fn=FastAttention.dot_product_attention):
+            bias=True
+            ):
     """Applies multi-head dot product attention on the input data.
 
     Projects the inputs into multi-headed query, key, and value vectors,
@@ -959,7 +972,7 @@ class MultiHeadDotProductAttention_Modified(Module):
     Returns:
       output of shape `[bs, dim1, dim2, ..., dimN, features]`.
     """
-
+    
     assert causal_mask or not cache, (
         'Caching is only support for causal attention.')
 
@@ -1085,10 +1098,9 @@ class MultiHeadDotProductAttention_Modified(Module):
           attention_mask > 0, jnp.full(attention_mask.shape, 0.).astype(dtype),
           jnp.full(attention_mask.shape, -1e10).astype(dtype))
     else:
-      attention_bias = None
-
+      attention_bias = None    
     # apply attention
-    x = attention_fn(
+    x = self.fast_unstruct_rfm_dot_product_attention.dot_product_attention(
         query,
         key,
         value,
