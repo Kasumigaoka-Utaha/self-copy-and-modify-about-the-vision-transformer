@@ -19,7 +19,7 @@ import flax.nn as nn
 
 from vit_jax import configs
 from vit_jax import models_resnet
-
+from vit_jax import modified_attention
 
 class IdentityLayer(nn.Module):
   """Identity layer, convenient for giving a name to an array."""
@@ -120,7 +120,7 @@ class Encoder1DBlock(nn.Module):
     # Attention block.
     assert inputs.ndim == 3
     x = nn.LayerNorm(inputs, dtype=dtype)
-    x = nn.SelfAttention(
+    x = modified_attention.SelfAttention_modified(
         x,
         dtype=dtype,
         inputs_kv=x,
