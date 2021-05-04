@@ -1,3 +1,7 @@
+# About the changes I made in this project
+Different from the traditional self-attention models, I replaced the self-attention model with a conv-attention model, which enables the time complexity to become O(NC^2) instead of O(N^2C), which is mentioned by the paper arXiv:2104.06399v1 [cs.CV] 13 Apr 2021. The modified attention code can be viewed from /vit_jax/modified_attention. I want to implement the co-scale method further if time permits.
+
+
 # Vision Transformer
 by Alexey Dosovitskiy\*†, Lucas Beyer\*, Alexander Kolesnikov\*, Dirk
 Weissenborn\*, Xiaohua Zhai\*, Thomas Unterthiner, Mostafa Dehghani, Matthias
